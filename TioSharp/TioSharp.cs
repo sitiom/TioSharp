@@ -26,6 +26,7 @@ namespace TioSharp
 		{
 			string name = couple.Key;
 			object obj = couple.Value;
+
 			if (obj == null)
 			{
 				return new byte[] { };
@@ -33,17 +34,20 @@ namespace TioSharp
 
 			if (obj is string[] flags)
 			{
-				if (flags.Length > 1)
+				if (flags.Length > 0)
 				{
+					if (flags.Length == 1)
+						return Encoding.UTF8.GetBytes(
+							$"F{name}\0{Encoding.UTF8.GetBytes(flags[0]).Length}\0{flags[0]}\0");
 					var content = new List<string> {
 						"V" + name,
 						flags.Length.ToString()
 					};
 					content.AddRange(flags.ToList());
-					Console.WriteLine(string.Join('\0', content) + "\0");
 					return Encoding.UTF8.GetBytes(string.Join('\0', content) + "\0");
 				}
-				return Encoding.UTF8.GetBytes($"F{name}\0{Encoding.UTF8.GetBytes(flags[0]).Length}\0{flags[0]}\0");
+
+				return new byte[] { };
 			}
 
 			return Encoding.UTF8.GetBytes($"{(name == "lang" ? 'V' : 'F')}{name}\0{(name == "lang" ? 1 : Encoding.UTF8.GetBytes((string)obj).Length)}\0{(string)obj}\0");
@@ -84,7 +88,7 @@ namespace TioSharp
 			}
 			bytes.Add((byte)'R');
 
-			return Ionic.Zlib.DeflateStream.CompressBuffer(bytes.ToArray()).ToArray();
+			return Ionic.Zlib.DeflateStream.CompressBuffer(bytes.ToArray());
 		}
 
 		// <summary>
