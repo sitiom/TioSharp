@@ -46,7 +46,7 @@ namespace TioSharp
 				return Encoding.UTF8.GetBytes($"F{name}\0{Encoding.UTF8.GetBytes(flags[0]).Length}\0{flags[0]}\0");
 			}
 
-			return Encoding.UTF8.GetBytes($"{(name == "lang"?'V':'F')}{name}\0{(name == "lang" ? 1 : Encoding.UTF8.GetBytes((string)obj).Length)}\0{(string)obj}\0");
+			return Encoding.UTF8.GetBytes($"{(name == "lang" ? 'V' : 'F')}{name}\0{(name == "lang" ? 1 : Encoding.UTF8.GetBytes((string)obj).Length)}\0{(string)obj}\0");
 		}
 
 		// <summary>
@@ -62,7 +62,7 @@ namespace TioSharp
 					".code.tio", code
 				},
 				{
-					".input.tio", string.Join('\n',inputs) // Lists of lines to give when input is asked
+					".input.tio", inputs != null? string.Join('\n',inputs) : null // Lists of lines to give when input is asked
 				},
 				{
 					"TIO_CFLAGS", cFlags
