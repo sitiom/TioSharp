@@ -62,7 +62,7 @@ namespace TioSharp
 					".code.tio", code
 				},
 				{
-					".input.tio", inputs // Lists of lines to give when input is asked
+					".input.tio", string.Join('\n',inputs) // Lists of lines to give when input is asked
 				},
 				{
 					"TIO_CFLAGS", cFlags
