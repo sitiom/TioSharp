@@ -46,12 +46,7 @@ namespace TioSharp
 				return Encoding.UTF8.GetBytes($"F{name}\0{Encoding.UTF8.GetBytes(flags[0]).Length}\0{flags[0]}\0");
 			}
 
-			if (name == "lang")
-			{
-				return Encoding.UTF8.GetBytes(string.Join('\0', "V" + name, "1", obj.ToString()) + "\0");
-			}
-
-			return Encoding.UTF8.GetBytes($"F{name}\0{Encoding.UTF8.GetBytes((string)obj).Length}\0{(string)obj}\0");
+			return Encoding.UTF8.GetBytes($"{(name == "lang"?'V':'F')}{name}\0{(name == "lang" ? 1 : Encoding.UTF8.GetBytes((string)obj).Length)}\0{(string)obj}\0");
 		}
 
 		// <summary>
