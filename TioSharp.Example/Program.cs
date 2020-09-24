@@ -7,7 +7,7 @@ namespace TioSharp.Example
 	{
 		private static async Task Main(string[] args)
 		{
-			TioSharp site = new TioSharp();
+			TioApi site = new TioApi();
 			byte[] requestData = site.CreateRequestData("cs-core", @"namespace HelloWorld
 {
 	class Hello {         

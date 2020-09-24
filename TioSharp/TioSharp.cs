@@ -1,28 +1,44 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace TioSharp
 {
-	public class TioSharp
+	public class TioApi
 	{
-		public readonly string Backend;
-		public readonly string Json;
+		public string Backend { get; }
+		public string Json { get; }
+		public List<string> Languages { get; }
 
-		public TioSharp(string backend = "https://tio.run/cgi-bin/run/api/", string json = "https://tio.run/languages.json")
+		public TioApi(string backend = "https://tio.run/cgi-bin/run/api/", string json = "https://tio.run/languages.json")
 		{
 			Backend = backend;
 			Json = json;
+			Languages = new List<string>();
+			RefreshLanguages();
 		}
+
+		private void RefreshLanguages()
+		{
+			JObject file = JObject.Parse(new WebClient().DownloadString(Json));
+
+
+			foreach (JToken content in file.Children())
+			{
+				JProperty jProperty = content.ToObject<JProperty>();
+				if (jProperty != null) Languages.Add(jProperty.Name);
+			}
+		}
+		
 
 		// <summary>
 		// Generates a valid TIO byte array (utf-8) for a variable or a file
 		// </summary>
-		public static byte[] ToTioString(KeyValuePair<string, object> couple)
+		private byte[] ToTioString(KeyValuePair<string, object> couple)
 		{
 			string name = couple.Key;
 			object obj = couple.Value;
