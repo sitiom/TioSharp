@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -26,6 +27,16 @@ namespace TioSharp
 		{
 			JObject file = JObject.Parse(new WebClient().DownloadString(Json));
 
+			foreach (JToken content in file.Children())
+			{
+				JProperty jProperty = content.ToObject<JProperty>();
+				if (jProperty != null) Languages.Add(jProperty.Name);
+			}
+		}
+
+		private async Task RefreshLanguagesAsync()
+		{
+			JObject file = JObject.Parse(await new WebClient().DownloadStringTaskAsync(new Uri(Json)));
 
 			foreach (JToken content in file.Children())
 			{
@@ -33,7 +44,6 @@ namespace TioSharp
 				if (jProperty != null) Languages.Add(jProperty.Name);
 			}
 		}
-		
 
 		// <summary>
 		// Generates a valid TIO byte array (utf-8) for a variable or a file
