@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using static System.Text.Encoding;
 
 namespace TioSharp
 {
@@ -23,7 +22,7 @@ namespace TioSharp
 			RefreshLanguages();
 		}
 
-		private void RefreshLanguages()
+		public void RefreshLanguages()
 		{
 			JObject file = JObject.Parse(new WebClient().DownloadString(Json));
 
@@ -34,7 +33,7 @@ namespace TioSharp
 			}
 		}
 
-		private async Task RefreshLanguagesAsync()
+		public async Task RefreshLanguagesAsync()
 		{
 			JObject file = JObject.Parse(await new WebClient().DownloadStringTaskAsync(new Uri(Json)));
 
@@ -48,35 +47,34 @@ namespace TioSharp
 		// <summary>
 		// Generates a valid TIO byte array (utf-8) for a variable or a file
 		// </summary>
-		private byte[] ToTioString(KeyValuePair<string, object> couple)
+		private byte[] ToTioBytes(KeyValuePair<string, object> couple)
 		{
 			string name = couple.Key;
 			object obj = couple.Value;
 
-			if (obj == null)
+			switch (obj)
 			{
-				return new byte[] { };
+				case null:
+					return new byte[0];
+				case string[] flags:
+					{
+						switch (flags.Length)
+						{
+							case 0:
+								return new byte[0];
+							case 1:
+								return UTF8.GetBytes($"F{name}\0{UTF8.GetBytes(flags[0]).Length}\0{flags[0]}\0");
+							default:
+								{
+									var content = new List<string> { $"V{name}", flags.Length.ToString() };
+									content.AddRange(flags);
+									return UTF8.GetBytes(string.Join('\0', content) + "\0");
+								}
+						}
+					}
+				default:
+					return UTF8.GetBytes($"{(name == "lang" ? 'V' : 'F')}{name}\0{(name == "lang" ? 1 : UTF8.GetBytes((string)obj).Length)}\0{(string)obj}\0");
 			}
-
-			if (obj is string[] flags)
-			{
-				if (flags.Length > 0)
-				{
-					if (flags.Length == 1)
-						return Encoding.UTF8.GetBytes(
-							$"F{name}\0{Encoding.UTF8.GetBytes(flags[0]).Length}\0{flags[0]}\0");
-					var content = new List<string> {
-						"V" + name,
-						flags.Length.ToString()
-					};
-					content.AddRange(flags.ToList());
-					return Encoding.UTF8.GetBytes(string.Join('\0', content) + "\0");
-				}
-
-				return new byte[] { };
-			}
-
-			return Encoding.UTF8.GetBytes($"{(name == "lang" ? 'V' : 'F')}{name}\0{(name == "lang" ? 1 : Encoding.UTF8.GetBytes((string)obj).Length)}\0{(string)obj}\0");
 		}
 
 		// <summary>
@@ -85,32 +83,19 @@ namespace TioSharp
 		public byte[] CreateRequestData(string language, string code, string[] inputs = null, string[] cFlags = null, string[] options = null, string[] args = null)
 		{
 			Dictionary<string, object> strings = new Dictionary<string, object> {
-				{
-					"lang", language
-				},
-				{
-					".code.tio", code
-				},
-				{
-					".input.tio", inputs != null? string.Join('\n',inputs) : null // Lists of lines to give when input is asked
-				},
-				{
-					"TIO_CFLAGS", cFlags
-
-				},
-				{
-					"TIO_OPTIONS", options
-				},
-				{
-					"args", args
-				}
-			};
+				{ "lang", language },
+				{ ".code.tio", code },
+				{ ".input.tio", inputs != null? string.Join('\n',inputs) : null },// Lists of lines to give when input is asked
+				{ "TIO_CFLAGS", cFlags },
+				{ "TIO_OPTIONS", options },
+				{ "args", args }
+ 			};
 
 			List<byte> bytes = new List<byte>();
 
 			foreach (KeyValuePair<string, object> pair in strings)
 			{
-				bytes.AddRange(ToTioString(pair));
+				bytes.AddRange(ToTioBytes(pair));
 			}
 			bytes.Add((byte)'R');
 
@@ -124,9 +109,10 @@ namespace TioSharp
 		{
 			HttpClient client = new HttpClient();
 			var response = await client.PostAsync("https://tio.run/cgi-bin/run/api/", new ByteArrayContent(requestData));
+			response.EnsureSuccessStatusCode();
 			byte[] responseBytes = await response.Content.ReadAsByteArrayAsync();
-			string data = Ionic.Zlib.GZipStream.UncompressString(responseBytes);
-			return data.Replace(data[..16], ""); // Remove token
+			string output = Ionic.Zlib.GZipStream.UncompressString(responseBytes);
+			return output.Replace(output[..16], ""); // Remove token
 		}
 	}
 }
