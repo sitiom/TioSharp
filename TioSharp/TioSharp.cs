@@ -45,47 +45,14 @@ namespace TioSharp
 		}
 
 		// <summary>
-		// Generates a valid TIO byte array (utf-8) for a variable or a file
-		// </summary>
-		private byte[] ToTioBytes(KeyValuePair<string, object> couple)
-		{
-			string name = couple.Key;
-			object obj = couple.Value;
-
-			switch (obj)
-			{
-				case null:
-					return new byte[0];
-				case string[] flags:
-					{
-						switch (flags.Length)
-						{
-							case 0:
-								return new byte[0];
-							case 1:
-								return UTF8.GetBytes($"F{name}\0{UTF8.GetBytes(flags[0]).Length}\0{flags[0]}\0");
-							default:
-								{
-									var content = new List<string> { $"V{name}", flags.Length.ToString() };
-									content.AddRange(flags);
-									return UTF8.GetBytes(string.Join('\0', content) + "\0");
-								}
-						}
-					}
-				default:
-					return UTF8.GetBytes($"{(name == "lang" ? 'V' : 'F')}{name}\0{(name == "lang" ? 1 : UTF8.GetBytes((string)obj).Length)}\0{(string)obj}\0");
-			}
-		}
-
-		// <summary>
 		// Returns a DEFLATE compressed byte array ready to be sent
 		// </summary>
 		public byte[] CreateRequestData(string language, string code, string[] inputs = null, string[] cFlags = null, string[] options = null, string[] args = null)
 		{
-			Dictionary<string, object> strings = new Dictionary<string, object> {
-				{ "lang", language },
-				{ ".code.tio", code },
-				{ ".input.tio", inputs != null? string.Join('\n',inputs) : null },// Lists of lines to give when input is asked
+			Dictionary<string, string[]> strings = new Dictionary<string, string[]> {
+				{ "lang", new[] { language } },
+				{ ".code.tio", new[] { code } },
+				{ ".input.tio", inputs != null? new[] { string.Join('\n', inputs) } : null },
 				{ "TIO_CFLAGS", cFlags },
 				{ "TIO_OPTIONS", options },
 				{ "args", args }
@@ -93,12 +60,11 @@ namespace TioSharp
 
 			List<byte> bytes = new List<byte>();
 
-			foreach (KeyValuePair<string, object> pair in strings)
+			foreach (KeyValuePair<string, string[]> pair in strings)
 			{
 				bytes.AddRange(ToTioBytes(pair));
 			}
 			bytes.Add((byte)'R');
-
 			return Ionic.Zlib.DeflateStream.CompressBuffer(bytes.ToArray());
 		}
 
@@ -108,11 +74,35 @@ namespace TioSharp
 		public async Task<string> SendAsync(byte[] requestData)
 		{
 			HttpClient client = new HttpClient();
-			var response = await client.PostAsync("https://tio.run/cgi-bin/run/api/", new ByteArrayContent(requestData));
+			HttpResponseMessage response = await client.PostAsync("https://tio.run/cgi-bin/run/api/", new ByteArrayContent(requestData));
 			response.EnsureSuccessStatusCode();
 			byte[] responseBytes = await response.Content.ReadAsByteArrayAsync();
 			string output = Ionic.Zlib.GZipStream.UncompressString(responseBytes);
+
 			return output.Replace(output[..16], ""); // Remove token
+		}
+
+		// <summary>
+		// Generates a valid TIO byte array (UTF-8) for a variable or a file
+		// </summary>
+		private static byte[] ToTioBytes(KeyValuePair<string, string[]> pair)
+		{
+			var (name, value) = pair;
+
+			if (value == null) return new byte[0];
+
+			return value.Length switch
+			{
+				0 => new byte[0],
+				1 => name switch
+				{
+					"lang" => UTF8.GetBytes(string.Join('\0', 'V' + name, value.Length, value[0]) + '\0'), // Language
+					_ => UTF8.GetBytes(string.Join('\0', 'F' + name, UTF8.GetBytes(value[0]).Length, value[0]) +
+									   '\0') // Code, and Input
+				},
+				_ => UTF8.GetBytes(string.Join('\0', 'V' + name, value.Length, string.Join('\0', value)) +
+								   "\0") // Compiler flags, Options, and Args
+			};
 		}
 	}
 }
