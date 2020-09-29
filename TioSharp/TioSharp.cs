@@ -12,13 +12,12 @@ namespace TioSharp
 	{
 		public string Backend { get; }
 		public string Json { get; }
-		public List<string> Languages { private set; get; }
+		public string[] Languages { private set; get; }
 
 		public TioApi(string backend = "https://tio.run/cgi-bin/run/api/", string json = "https://tio.run/languages.json")
 		{
 			Backend = backend;
 			Json = json;
-			Languages = new List<string>();
 			RefreshLanguages();
 		}
 
@@ -34,7 +33,7 @@ namespace TioSharp
 				if (jProperty != null) newList.Add(jProperty.Name);
 			}
 
-			Languages = newList;
+			Languages = newList.ToArray();
 		}
 
 		public async Task RefreshLanguagesAsync()
@@ -48,7 +47,7 @@ namespace TioSharp
 				JProperty jProperty = content.ToObject<JProperty>();
 				if (jProperty != null) newList.Add(jProperty.Name);
 			}
-			Languages = newList;
+			Languages = newList.ToArray();
 		}
 
 		// <summary>
