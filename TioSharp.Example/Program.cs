@@ -10,7 +10,7 @@ namespace TioSharp.Example
 			TioApi site = new TioApi();
 			byte[] requestData = site.CreateRequestData("cs-core", @"namespace HelloWorld
 {
-	class Hello {         
+	class Hello {
 		static void Main(string[] args)
 		{
 			string name = System.Console.ReadLine();
